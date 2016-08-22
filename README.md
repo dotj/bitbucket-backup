@@ -14,11 +14,14 @@ an `git remote update` will be run for git repos.
 pip install https://github.com/samkuehn/bitbucket-backup/archive/master.zip
 ```
 
+*or* clone the repo and run the script manually
+
 ## Quickstart
 ```bash
 bitbucket-backup [-u <bitbucket_username>] [-p <bitbucket_password>] [-k <oauth_key>] [-s <oauth_secret>]
   [-l <local_backup_location>] [-t <bitbucket_team>] [-v] [-q] [-c] [--http] [--skip-password] [--mirror]
 ```
+
 Username/password, or OAuth credentials, are needed to access the bitbucket api to get a repo listing.
 At this time it is not used to do the clone/update.
 Clone/update requires that your ssh keys have been uploaded to bitbucket.

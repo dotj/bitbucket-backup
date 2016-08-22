@@ -22,7 +22,7 @@ try:
 except NameError:
     pass
 
-_verbose = False
+_verbose = True
 _quiet = False
 
 
@@ -58,12 +58,14 @@ def exec_cmd(command):
     debug("Executing command: %s" % command)
     if not _verbose:
         if 'nt' == os.name:
-            command = "%s > nul 2> nul" % command
+            # This will cause the entire script to error out if SSH is not set up properly
+            #command = "%s > nul 2> nul" % command
+            command = "%s" % command
         else:
             command = "%s > /dev/null 2>&1" % command
     resp = os.system(command)
     if resp != 0:
-        exit("Command [%s] failed" % command, resp)
+        exit("Command failed: [%s]" % command, resp)
 
 
 def compress(repo, location):
@@ -81,6 +83,7 @@ def compress(repo, location):
 
 
 def clone_repo(repo, backup_dir, http, username, password, mirror=False, with_wiki=False):
+
     global _quiet, _verbose
     scm = repo.get('scm')
     slug = repo.get('slug')
@@ -91,6 +94,7 @@ def clone_repo(repo, backup_dir, http, username, password, mirror=False, with_wi
         exit("Cannot backup via http without username and password" % scm)
     slug_url = quote(slug)
     command = None
+
     if scm == 'hg':
         if http:
             command = 'hg clone https://%s:%s@bitbucket.org/%s/%s' % (quote(username), quote(password), owner_url, slug_url)
@@ -104,6 +108,7 @@ def clone_repo(repo, backup_dir, http, username, password, mirror=False, with_wi
             command = "%s https://%s:%s@bitbucket.org/%s/%s.git" % (git_command, quote(username), quote(password), owner_url, slug_url)
         else:
             command = "%s git@bitbucket.org:%s/%s.git" % (git_command, owner_url, slug_url)
+
     if not command:
         exit("could not build command (scm [%s] not recognized?)" % scm)
     debug("Cloning %s..." % repo.get('name'))
@@ -190,9 +195,11 @@ def main():
         )
         user = bb.user(owner)
         repos = sorted(user.repositories(), key=lambda repo: repo.get("name"))
+
         if not repos:
             print("No repositories found. Are you sure you provided the correct password")
         for repo in repos:
+
             if args.ignore_repo_list and repo.get("slug") in args.ignore_repo_list:
                 debug("ignoring repo %s with slug: %s" % (repo.get("name"), repo.get("slug")))
                 continue
@@ -200,7 +207,8 @@ def main():
             debug("Backing up [%s]..." % repo.get("name"), True)
             backup_dir = os.path.join(location, repo.get("slug"))
 
-            for attempt in xrange(1, max_attempts + 1):
+            for attempt in range(1, max_attempts + 1):
+                print('Attempt #' + str(attempt) + '/' + str(max_attempts))
                 try:
                     if not os.path.isdir(backup_dir):
                         clone_repo(repo, backup_dir, http, username, password, mirror=_mirror, with_wiki=_with_wiki)
@@ -209,10 +217,11 @@ def main():
                         update_repo(repo, backup_dir, with_wiki=_with_wiki)
                 except:
                     if attempt == max_attempts:
-                        raise MaxBackupAttemptsReached("repo [%s] is reached maximum number [%d] of backup tries" % (repo.get("name"), attempt))
+                        raise MaxBackupAttemptsReached("repo [%s] has reached maximum number [%d] of backup tries" % (repo.get("name"), attempt))
                     debug("Failed to backup repository [%s], keep trying, %d attempts remain" % (repo.get("name"), max_attempts - attempt))
-                else:
-                    break
+                    pass
+                #else:
+                #    break
 
         if args.compress:
             compress(repo, location)
